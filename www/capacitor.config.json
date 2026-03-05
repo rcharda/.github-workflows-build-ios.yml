@@ -1,0 +1,6 @@
+{
+  "appId": "com.elecpro.myboxtv",
+  "appName": "My Box TV",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
