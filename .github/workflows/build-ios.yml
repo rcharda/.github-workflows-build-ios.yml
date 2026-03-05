@@ -15,26 +15,28 @@ jobs:
 
       - name: Setup Project
         run: |
-          # 1. Créer un fichier de configuration pour éviter les erreurs npm
+          # 1. Créer le package.json
           echo '{"name": "myboxapp", "version": "1.0.0"}' > package.json
           
-          # 2. Installer Capacitor proprement
-          npm install @capacitor/core @capacitor/cli @capacitor/ios
+          # 2. Installer les versions stables de Capacitor
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest
           
-          # 3. Vérifier le dossier www (votre structure actuelle)
-          # Si le dossier www existe, on s'assure qu'il contient un index.html
-          if [ -d "www" ]; then
-            echo "Dossier www trouvé."
-          else
-            mkdir -p www
-            echo "<html><body>My Box TV - Erreur de structure</body></html>" > www/index.html
-          fi
-          
-          # 4. Créer le fichier de config Capacitor
+          # 3. Configurer l'application
           echo '{"appId": "com.elecpro.myboxtv", "appName": "MyBoxTV", "webDir": "www"}' > capacitor.config.json
+          
+          # 4. Créer le dossier www s'il est manquant (sécurité)
+          mkdir -p www
+          if [ ! -f "www/index.html" ]; then echo "<html><body>My Box TV</body></html>" > www/index.html; fi
           
           # 5. Ajouter la plateforme iOS
           npx cap add ios
+
+      - name: Fix iOS Deployment Target (Le Correctif)
+        run: |
+          # Cette ligne force le projet à cibler iOS 13.0 au lieu de la version trop vieille
+          sed -i '' 's/platform :ios, .*/platform :ios, "13.0"/' ios/App/Podfile
+          # On force aussi la mise à jour des dépendances natives
+          cd ios/App && pod update Capacitor
 
       - name: Sync Capacitor
         run: npx cap sync ios
