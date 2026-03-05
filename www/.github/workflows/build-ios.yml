@@ -15,24 +15,25 @@ jobs:
 
       - name: Setup Project
         run: |
-          # 1. Créer le fichier de base pour npm
+          # 1. Créer un fichier de configuration pour éviter les erreurs npm
           echo '{"name": "myboxapp", "version": "1.0.0"}' > package.json
           
-          # 2. Installer les outils Capacitor
+          # 2. Installer Capacitor proprement
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           
-          # 3. Vérifier et préparer le dossier www
-          # Si le dossier www existe déjà (ce qui est votre cas), on le garde.
-          # Si pour une raison ou une seule index.html n'est pas là, on crée un secours.
-          if [ ! -f "www/index.html" ]; then
+          # 3. Vérifier le dossier www (votre structure actuelle)
+          # Si le dossier www existe, on s'assure qu'il contient un index.html
+          if [ -d "www" ]; then
+            echo "Dossier www trouvé."
+          else
             mkdir -p www
-            echo "<html><body>My Box TV - Erreur de chemin</body></html>" > www/index.html
+            echo "<html><body>My Box TV - Erreur de structure</body></html>" > www/index.html
           fi
           
-          # 4. Créer la configuration de l'application
+          # 4. Créer le fichier de config Capacitor
           echo '{"appId": "com.elecpro.myboxtv", "appName": "MyBoxTV", "webDir": "www"}' > capacitor.config.json
           
-          # 5. Ajouter le projet iOS
+          # 5. Ajouter la plateforme iOS
           npx cap add ios
 
       - name: Sync Capacitor
