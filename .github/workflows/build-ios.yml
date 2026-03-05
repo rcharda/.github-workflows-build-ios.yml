@@ -1,49 +1,79 @@
 name: Build iOS IPA
-on: [push]
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Permet de lancer le build manuellement avec un bouton !
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout code
+      - name: 1. Récupération du code
         uses: actions/checkout@v4
 
-      - name: Install Latest Node.js
+      - name: 2. Installation de Node.js 22 (Requis par Capacitor)
         uses: actions/setup-node@v4
         with:
-          node-version: 22 # On passe à la version 22 pour satisfaire Capacitor
+          node-version: 22
 
-      - name: Setup Project
+      - name: 3. Préparation sécurisée du projet
         run: |
-          # 1. Nettoyage et création du package.json
-          rm -rf package.json package-lock.json
-          echo '{"name":"myboxapp","version":"1.0.0","private":true}' > package.json
+          # Création d'un package.json valide pour éviter l'erreur de nom
+          rm -f package.json package-lock.json
+          echo '{
+            "name": "myboxtv-app",
+            "version": "1.0.0",
+            "dependencies": {
+              "@capacitor/cli": "latest",
+              "@capacitor/core": "latest",
+              "@capacitor/ios": "latest"
+            }
+          }' > package.json
           
-          # 2. Installation de Capacitor
-          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/ios@latest
-          
-          # 3. Vérification du dossier www
-          if [ ! -d "www" ]; then mkdir -p www; fi
-          if [ ! -f "www/index.html" ]; then echo "<html><body>My Box TV</body></html>" > www/index.html; fi
-          
-          # 4. Configuration de l'App
-          echo '{"appId":"com.elecpro.myboxtv","appName":"MyBoxTV","webDir":"www"}' > capacitor.config.json
-          
-          # 5. Ajout de la plateforme iOS
-          npx cap add ios
+          # Installation des outils
+          npm install
 
-      - name: Fix iOS Compatibility
+      - name: 4. Configuration de l'application My Box TV
         run: |
-          # On force iOS 13.0 dans le Podfile
-          if [ -f "ios/App/App/Podfile" ]; then
-            sed -i '' 's/platform :ios, .*/platform :ios, "13.0"/' ios/App/App/Podfile
+          echo '{
+            "appId": "com.elecpro.myboxtv",
+            "appName": "MyBoxTV",
+            "webDir": "www",
+            "bundledWebRuntime": false
+          }' > capacitor.config.json
+
+      - name: 5. Préparation de l'interface (Dossier www)
+        run: |
+          mkdir -p www
+          # Le script cherche votre fichier, peu importe où vous l'avez mis
+          if [ -f "index_ui.html" ]; then
+            cp index_ui.html www/index.html
+            echo "Fichier index_ui.html trouvé et copié."
+          elif [ -f "www/index.html" ]; then
+            echo "Le fichier www/index.html est déjà à la bonne place."
+          elif [ -f "index.html" ]; then
+            cp index.html www/index.html
+            echo "Fichier index.html trouvé et copié."
+          else
+            echo "<html><body style='background:#000;color:#fff;text-align:center;'><h1>My Box TV</h1><p>Erreur: Fichier HTML introuvable</p></body></html>" > www/index.html
           fi
-          # Mise à jour des dépendances natives
-          cd ios/App && pod update Capacitor || echo "Pod update skipped"
 
-      - name: Sync & Build
+      - name: 6. Génération du projet iOS
         run: |
+          npx cap add ios
           npx cap sync ios
+
+      - name: 7. Correction de compatibilité Apple (iOS 13.0+)
+        run: |
+          # Force la version d'iOS pour éviter le crash CocoaPods
+          if [ -f "ios/App/Podfile" ]; then
+            sed -i '' 's/platform :ios, .*/platform :ios, "13.0"/' ios/App/Podfile
+          fi
+          cd ios/App
+          pod update Capacitor
+
+      - name: 8. Compilation de l'application Xcode
+        run: |
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
                      -sdk iphoneos \
@@ -52,14 +82,14 @@ jobs:
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO
 
-      - name: Create IPA
+      - name: 9. Création du fichier IPA
         run: |
           mkdir -p Payload
           cp -r App.xcarchive/Products/Applications/App.app Payload/
           zip -r MyBoxTV.ipa Payload
 
-      - name: Upload Artifact
+      - name: 10. Mise à disposition du téléchargement
         uses: actions/upload-artifact@v4
         with:
-          name: MyBoxTV-Application-IPA
+          name: MyBoxTV-IPA
           path: MyBoxTV.ipa
