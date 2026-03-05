@@ -8,44 +8,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Node.js
+      - name: Install Latest Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22 # On passe à la version 22 pour satisfaire Capacitor
 
-      - name: Setup Project (Correction Forcee)
+      - name: Setup Project
         run: |
-          # 1. On nettoie tout pour repartir de zero sur le serveur
-          rm -rf package.json package-lock.json node_modules
+          # 1. Nettoyage et création du package.json
+          rm -rf package.json package-lock.json
+          echo '{"name":"myboxapp","version":"1.0.0","private":true}' > package.json
           
-          # 2. On cree un package.json ultra basique manuellement
-          echo '{"name":"myboxapp","version":"1.0.0","private":true,"dependencies":{"@capacitor/cli":"latest","@capacitor/core":"latest","@capacitor/ios":"latest"}}' > package.json
+          # 2. Installation de Capacitor
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/ios@latest
           
-          # 3. Installation forcee des outils
-          npm install
+          # 3. Vérification du dossier www
+          if [ ! -d "www" ]; then mkdir -p www; fi
+          if [ ! -f "www/index.html" ]; then echo "<html><body>My Box TV</body></html>" > www/index.html; fi
           
-          # 4. Preparation du dossier www (on utilise le votre)
-          if [ -d "www" ]; then
-            echo "Dossier www detecte."
-          else
-            mkdir -p www
-            # On cherche index_ui.html si index.html n'existe pas
-            cp index_ui.html www/index.html || echo "<html><body>My Box TV</body></html>" > www/index.html
-          fi
-          
-          # 5. Creation forcee du fichier config
+          # 4. Configuration de l'App
           echo '{"appId":"com.elecpro.myboxtv","appName":"MyBoxTV","webDir":"www"}' > capacitor.config.json
           
-          # 6. Ajout de la plateforme iOS
+          # 5. Ajout de la plateforme iOS
           npx cap add ios
 
       - name: Fix iOS Compatibility
         run: |
-          # Correction du Podfile pour iOS 13.0
+          # On force iOS 13.0 dans le Podfile
           if [ -f "ios/App/App/Podfile" ]; then
             sed -i '' 's/platform :ios, .*/platform :ios, "13.0"/' ios/App/App/Podfile
           fi
-          # Mise a jour des pods
+          # Mise à jour des dépendances natives
           cd ios/App && pod update Capacitor || echo "Pod update skipped"
 
       - name: Sync & Build
