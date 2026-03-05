@@ -15,19 +15,25 @@ jobs:
 
       - name: Setup Project
         run: |
-          # Création d'un dossier temporaire propre pour éviter l'erreur de nom
-          mkdir temp_build
-          cp index_ui.html temp_build/index.html || cp index.html temp_build/index.html || echo "<html><body>App</body></html>" > temp_build/index.html
+          # 1. Créer un fichier de configuration pour éviter les erreurs npm
+          echo '{"name": "myboxapp", "version": "1.0.0"}' > package.json
           
-          # Initialisation forcée avec un nom valide
-          npm init -y --scope=@myboxtv --name myboxapp
+          # 2. Installer Capacitor proprement
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           
-          # Configuration manuelle du dossier de sortie
-          mkdir -p www
-          cp temp_build/index.html www/index.html
+          # 3. Vérifier le dossier www (votre structure actuelle)
+          # Si le dossier www existe, on s'assure qu'il contient un index.html
+          if [ -d "www" ]; then
+            echo "Dossier www trouvé."
+          else
+            mkdir -p www
+            echo "<html><body>My Box TV - Erreur de structure</body></html>" > www/index.html
+          fi
           
-          # Ajout de la plateforme iOS
+          # 4. Créer le fichier de config Capacitor
+          echo '{"appId": "com.elecpro.myboxtv", "appName": "MyBoxTV", "webDir": "www"}' > capacitor.config.json
+          
+          # 5. Ajouter la plateforme iOS
           npx cap add ios
 
       - name: Sync Capacitor
