@@ -15,11 +15,12 @@ jobs:
 
       - name: Setup Project
         run: |
-          npm init -y
+          # On force un nom de projet valide pour npm
+          npm init -y --scope=@myboxtv --name myboxtvapp
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           mkdir -p www
-          # On vérifie si index.html existe, sinon on le crée
-          cp index.html www/index.html || echo "<html><body>My Box TV</body></html>" > www/index.html
+          # On s'assure que votre fichier index_ui.html est bien copié
+          if [ -f "index_ui.html" ]; then cp index_ui.html www/index.html; elif [ -f "index.html" ]; then cp index.html www/index.html; else echo "<html><body>My Box TV</body></html>" > www/index.html; fi
           npx cap add ios
 
       - name: Sync Capacitor
